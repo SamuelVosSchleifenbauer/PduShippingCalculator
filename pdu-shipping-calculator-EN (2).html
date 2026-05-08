@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDU Shipping Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f4f2ee;
+    --surface: #ffffff;
+    --surface2: #eeecea;
+    --border: #d4d0c8;
+    --text: #1a1916;
+    --text-muted: #6b6860;
+    --text-faint: #9c9890;
+    --accent: #1a3a5c;
+    --accent-light: #e8eef5;
+    --accent-mid: #3a6a9c;
+    --warn-bg: #fff8e6;
+    --warn-border: #e6c46a;
+    --warn-text: #7a5a00;
+    --success-bg: #e8f5ee;
+    --success-border: #6ab88a;
+    --success-text: #1a5a34;
+    --radius: 6px;
+    --radius-lg: 10px;
+  }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .container {
+    max-width: 780px;
+    margin: 0 auto;
+  }
+
+  header {
+    margin-bottom: 2rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 2px solid var(--accent);
+  }
+
+  header h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--accent);
+  }
+
+  header p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .card-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+
+  @media (max-width: 560px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 380px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+
+  input[type="number"], select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.9rem;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  input[type="number"]:focus, select:focus { border-color: var(--accent-mid); }
+
+  .input-with-unit { position: relative; }
+  .input-with-unit input { padding-right: 38px; }
+  .input-unit {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    font-size: 0.75rem; color: var(--text-faint); font-family: 'IBM Plex Mono', monospace;
+    pointer-events: none;
+  }
+
+  .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  @media (max-width: 560px) { .metric-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .metric {
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 0.85rem 1rem;
+    text-align: center;
+  }
+  .metric-label { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric-val { font-family: 'IBM Plex Mono', monospace; font-size: 1.35rem; font-weight: 500; color: var(--accent); }
+  .metric-unit { font-size: 0.72rem; color: var(--text-faint); margin-top: 3px; }
+
+  .result-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .result-table tr { border-bottom: 1px solid var(--border); }
+  .result-table tr:last-child { border-bottom: none; }
+  .result-table td { padding: 9px 4px; }
+  .result-table td:first-child { color: var(--text-muted); }
+  .result-table td:last-child { text-align: right; font-weight: 500; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; }
+
+  .note {
+    font-size: 0.82rem;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    margin-top: 1rem;
+    line-height: 1.5;
+  }
+  .note-warn { background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-text); }
+  .note-info { background: var(--accent-light); border: 1px solid #b0c8e0; color: var(--accent); }
+
+  .hidden { display: none !important; }
+
+  .pallet-dims {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: center;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+  }
+
+  .dim-block { text-align: center; min-width: 70px; }
+  .dim-big { font-family: 'IBM Plex Mono', monospace; font-size: 1.8rem; font-weight: 500; color: var(--accent); line-height: 1; }
+  .dim-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .dim-sep { font-size: 1.5rem; color: var(--border); align-self: flex-end; padding-bottom: 8px; }
+
+  footer {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-faint);
+    margin-top: 2rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>PDU Shipping Calculator</h1>
+    <p>Calculate packaging dimensions, pallet dimensions and shipment type based on UK shipping guidelines</p>
+  </header>
+
+  <!-- Input -->
+  <div class="card">
+    <p class="card-title">PDU Details</p>
+    <div class="grid-2" style="margin-bottom:1rem;">
+      <div>
+        <label>PDU length</label>
+        <div class="input-with-unit">
+          <input type="number" id="pduLen" min="1" step="1" placeholder="e.g. 100" oninput="calc()">
+          <span class="input-unit">cm</span>
+        </div>
+      </div>
+      <div>
+        <label>Number of PDUs</label>
+        <input type="number" id="qty" min="1" step="1" placeholder="e.g. 40" oninput="calc()">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div>
+        <label>Cable gland position</label>
+        <select id="wartel" onchange="calc()">
+          <option value="17">End panel (+17 cm)</option>
+          <option value="11">Base (+11 cm)</option>
+        </select>
+      </div>
+      <div>
+        <label>PDU type</label>
+        <select id="pduType" onchange="calc()">
+          <option value="standard">Standard (2 per box)</option>
+          <option value="double">Double-depth (1 per box)</option>
+          <option value="inline">Inline / short 40 cm (outer box)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Box dims -->
+  <div class="card" id="box-card">
+    <p class="card-title">Shipping Box</p>
+    <div class="metric-grid">
+      <div class="metric"><p class="metric-label">Length</p><p class="metric-val" id="boxL">—</p><p class="metric-unit">cm</p></div>
+      <div class="metric"><p class="metric-label">Width</p><p class="metric-val" id="boxW">—</p><p class="metric-unit">cm</p></div>
+      <div class="metric"><p class="metric-label">Height</p><p class="metric-val" id="boxH">—</p><p class="metric-unit">cm</p></div>
+      <div class="metric"><p class="metric-label">Weight</p><p class="metric-val" id="boxWt">—</p><p class="metric-unit">kg / box</p></div>
+    </div>
+    <div id="inline-note" class="note note-info hidden">
+      Inline / short PDUs are packed in an outer box of 71 × 31 × 36 cm — 6 to 8 units per box.
+    </div>
+  </div>
+
+  <!-- Shipment summary -->
+  <div class="card">
+    <p class="card-title">Shipment Summary</p>
+    <div class="grid-3">
+      <div class="metric"><p class="metric-label">No. of boxes</p><p class="metric-val" id="numBoxes">—</p><p class="metric-unit">boxes</p></div>
+      <div class="metric"><p class="metric-label">Total weight</p><p class="metric-val" id="totalWt">—</p><p class="metric-unit">kg (estimated)</p></div>
+      <div class="metric"><p class="metric-label">Ship method</p><p class="metric-val" id="shipMethod" style="font-size:1rem;padding-top:4px;">—</p><p class="metric-unit">&nbsp;</p></div>
+    </div>
+  </div>
+
+  <!-- Pallet -->
+  <div class="card hidden" id="pallet-card">
+    <p class="card-title">Pallet Dimensions</p>
+    <div class="pallet-dims">
+      <div class="dim-block"><div class="dim-big" id="palL">—</div><div class="dim-label">Length (cm)</div></div>
+      <div class="dim-sep">×</div>
+      <div class="dim-block"><div class="dim-big">80</div><div class="dim-label">Width (cm)</div></div>
+      <div class="dim-sep">×</div>
+      <div class="dim-block"><div class="dim-big" id="palH">—</div><div class="dim-label">Height (cm)</div></div>
+    </div>
+    <table class="result-table">
+      <tr><td>Boxes on pallet</td><td id="palBoxes">—</td></tr>
+      <tr><td>Units on pallet</td><td id="palQty">—</td></tr>
+      <tr><td>Estimated total weight</td><td id="palWt">—</td></tr>
+    </table>
+    <div id="pallet-warn" class="note note-warn hidden"></div>
+    <div id="multi-pallet-note" class="note note-info hidden"></div>
+  </div>
+
+  <footer>PDU Shipping Calculator — UK Shipping Guidelines</footer>
+</div>
+
+<script>
+const palletTable = [
+  { maxBoxes: 10, height: 80  },
+  { maxBoxes: 14, height: 90  },
+  { maxBoxes: 16, height: 100 },
+  { maxBoxes: 19, height: 112 },
+  { maxBoxes: 21, height: 124 },
+  { maxBoxes: 23, height: 136 },
+  { maxBoxes: 26, height: 148 },
+  { maxBoxes: 28, height: 160 },
+  { maxBoxes: 30, height: 172 },
+  { maxBoxes: 31, height: 175 },
+  { maxBoxes: 33, height: 187 },
+  { maxBoxes: 35, height: 195 },
+];
+
+function getBoxWeight(len) {
+  if (len <= 100) return [5, 7];
+  if (len <= 130) return [8, 10];
+  if (len <= 160) return [11, 13];
+  return [13, 15];
+}
+
+function getPalletRow(n) {
+  return palletTable.find(r => n <= r.maxBoxes) || null;
+}
+
+function set(id, val) { document.getElementById(id).textContent = val; }
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+
+function calc() {
+  const pduLen = parseFloat(document.getElementById('pduLen').value) || 0;
+  const wartel = parseInt(document.getElementById('wartel').value);
+  const pduType = document.getElementById('pduType').value;
+  const qty = parseInt(document.getElementById('qty').value) || 0;
+
+  ['boxL','boxW','boxH','boxWt','numBoxes','totalWt','shipMethod','palL','palH','palBoxes','palQty','palWt']
+    .forEach(id => set(id, '—'));
+  hide('inline-note'); hide('pallet-card'); hide('pallet-warn'); hide('multi-pallet-note');
+
+  if (pduType === 'inline') {
+    show('inline-note');
+    set('boxL', '71'); set('boxW', '31'); set('boxH', '36');
+    if (qty > 0) {
+      const minB = Math.ceil(qty / 8), maxB = Math.ceil(qty / 6);
+      set('numBoxes', minB === maxB ? minB : `${minB}–${maxB}`);
+      set('shipMethod', qty >= 20 ? 'Pallet' : 'Parcel');
+    }
+    return;
+  }
+
+  if (!pduLen) return;
+
+  const boxLen = pduLen + wartel;
+  const perBox = pduType === 'double' ? 1 : 2;
+  const [wtMin, wtMax] = getBoxWeight(boxLen);
+
+  set('boxL', boxLen); set('boxW', '32'); set('boxH', '12');
+  set('boxWt', `${wtMin}–${wtMax}`);
+
+  if (!qty) return;
+
+  const numBoxes = Math.ceil(qty / perBox);
+  const totalMin = numBoxes * wtMin, totalMax = numBoxes * wtMax;
+
+  set('numBoxes', numBoxes);
+  set('totalWt', `${totalMin}–${totalMax} kg`);
+
+  if (qty < 20) {
+    set('shipMethod', 'Parcel');
+    return;
+  }
+
+  set('shipMethod', 'Pallet');
+  show('pallet-card');
+
+  const palLen = boxLen + 3;
+  set('palL', palLen);
+  set('palQty', qty);
+  set('palWt', `${totalMin}–${totalMax} kg`);
+
+  if (numBoxes > 35) {
+    const numPallets = Math.ceil(numBoxes / 35);
+    set('palH', '195');
+    set('palBoxes', `${numBoxes} → ${numPallets} pallets`);
+    show('pallet-warn');
+    document.getElementById('pallet-warn').textContent =
+      `${numBoxes} boxes exceeds the maximum of 35 per pallet. Split across ${numPallets} pallets.`;
+    show('multi-pallet-note');
+    document.getElementById('multi-pallet-note').textContent =
+      `Each pallet: max 35 boxes, ${palLen} × 80 × 195 cm.`;
+    return;
+  }
+
+  const row = getPalletRow(numBoxes);
+  set('palH', row.height);
+  set('palBoxes', numBoxes);
+}
+</script>
+</body>
+</html>
